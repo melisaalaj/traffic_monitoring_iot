@@ -1,5 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
+import MLIndicator from './MLIndicator';
 
 const GridContainer = styled.div`
   display: grid;
@@ -29,6 +30,7 @@ const SensorCard = styled.div`
     ? '0 5px 20px rgba(52, 152, 219, 0.4)' 
     : '0 3px 10px rgba(0,0,0,0.1)'
   };
+  position: relative;
 
   &:hover {
     transform: translateY(-2px);
@@ -98,6 +100,10 @@ const SensorGrid = ({ sensors, selectedSensor, onSensorSelect }) => {
             selected={isSelected}
             onClick={() => onSensorSelect(sensor.sensor_id)}
           >
+            <MLIndicator 
+              sensorId={sensor.sensor_id} 
+              sensorType={sensor.sensor_type === 'traffic_loop' ? 'traffic' : sensor.sensor_type}
+            />
             <SensorTitle>
               {emoji} {sensor.sensor_id}
             </SensorTitle>

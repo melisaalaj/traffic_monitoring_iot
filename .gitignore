@@ -31,3 +31,7 @@ docs/*.tmp
 __pycache__/
 *.jar
 .env
+./logs
+/spark-api-checkpoints
+
+*.pid

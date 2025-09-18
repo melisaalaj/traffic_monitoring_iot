@@ -642,3 +642,288 @@ def get_historical_noise():
     except Exception as e:
         cluster.shutdown()
         return jsonify({"error": str(e)}), 500 
+
+@api_bp.route('/ml/predict/<sensor_id>', methods=['GET'])
+def get_ml_prediction(sensor_id):
+    """Get ML prediction for a specific sensor using current data"""
+    cluster, session = get_cassandra_connection()
+    if not session:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        # Get latest sensor data
+        query = """
+        SELECT vehicle_count_per_min, avg_speed_kmh, avg_wait_time_s 
+        FROM aggregates_minute 
+        WHERE sensor_id = %s 
+        ORDER BY window_start DESC 
+        LIMIT 1
+        """
+        
+        result = session.execute(query, [sensor_id])
+        row = result.one()
+        
+        if not row:
+            cluster.shutdown()
+            return jsonify({"error": "No data found for sensor"}), 404
+        
+        # Call ML API service
+        import requests
+        try:
+            ml_response = requests.post('http://localhost:8090/predict', 
+                json={
+                    'sensor_id': sensor_id,
+                    'vehicle_count': float(row.vehicle_count_per_min or 0),
+                    'avg_speed': float(row.avg_speed_kmh or 0),
+                    'wait_time_s': float(row.avg_wait_time_s or 0)
+                },
+                timeout=5
+            )
+            
+            if ml_response.status_code == 200:
+                ml_data = ml_response.json()
+                cluster.shutdown()
+                return jsonify(ml_data)
+            else:
+                cluster.shutdown()
+                return jsonify({
+                    "error": "ML API unavailable",
+                    "fallback": True,
+                    "predictions": {
+                        "traffic_state": "Unknown",
+                        "confidence": 0.0,
+                        "severity": "Low",
+                        "predicted_duration": "Unknown",
+                        "anomaly_detected": False,
+                        "anomaly_score": 0.0,
+                        "model_version": "fallback-v1.0"
+                    }
+                }), 503
+                
+        except requests.exceptions.RequestException:
+            cluster.shutdown()
+            return jsonify({
+                "error": "ML API connection failed",
+                "fallback": True,
+                "predictions": {
+                    "traffic_state": "Unknown",
+                    "confidence": 0.0,
+                    "severity": "Low", 
+                    "predicted_duration": "Unknown",
+                    "anomaly_detected": False,
+                    "anomaly_score": 0.0,
+                    "model_version": "fallback-v1.0"
+                }
+            }), 503
+            
+    except Exception as e:
+        cluster.shutdown()
+        return jsonify({"error": str(e)}), 500
+
+@api_bp.route('/ml/predictions', methods=['GET'])
+def get_all_ml_predictions():
+    """Get ML predictions for all traffic sensors"""
+    cluster, session = get_cassandra_connection()
+    if not session:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        # Get all traffic sensors with latest data
+        query = """
+        SELECT sensor_id FROM sensor_metadata 
+        WHERE type = 'traffic_loop' ALLOW FILTERING
+        """
+        
+        sensor_result = session.execute(query)
+        predictions = []
+        
+        import requests
+        
+        for sensor_row in sensor_result:
+            sensor_id = sensor_row.sensor_id
+            
+            # Get latest data for this sensor
+            data_query = """
+            SELECT vehicle_count_per_min, avg_speed_kmh, avg_wait_time_s, window_start
+            FROM aggregates_minute 
+            WHERE sensor_id = %s 
+            ORDER BY window_start DESC 
+            LIMIT 1
+            """
+            
+            data_result = session.execute(data_query, [sensor_id])
+            data_row = data_result.one()
+            
+            if data_row:
+                # Call ML API for this sensor
+                try:
+                    ml_response = requests.post('http://localhost:8090/predict', 
+                        json={
+                            'sensor_id': sensor_id,
+                            'vehicle_count': float(data_row.vehicle_count_per_min or 0),
+                            'avg_speed': float(data_row.avg_speed_kmh or 0),
+                            'wait_time_s': float(data_row.avg_wait_time_s or 0)
+                        },
+                        timeout=3
+                    )
+                    
+                    if ml_response.status_code == 200:
+                        ml_data = ml_response.json()
+                        predictions.append({
+                            'sensor_id': sensor_id,
+                            'timestamp': format_value(data_row.window_start),
+                            'input_data': {
+                                'vehicle_count': float(data_row.vehicle_count_per_min or 0),
+                                'avg_speed': float(data_row.avg_speed_kmh or 0),
+                                'wait_time_s': float(data_row.avg_wait_time_s or 0)
+                            },
+                            'predictions': ml_data.get('predictions', {}),
+                            'ml_available': True
+                        })
+                    else:
+                        # Fallback prediction
+                        predictions.append({
+                            'sensor_id': sensor_id,
+                            'timestamp': format_value(data_row.window_start),
+                            'input_data': {
+                                'vehicle_count': float(data_row.vehicle_count_per_min or 0),
+                                'avg_speed': float(data_row.avg_speed_kmh or 0),
+                                'wait_time_s': float(data_row.avg_wait_time_s or 0)
+                            },
+                            'predictions': {
+                                'traffic_state': 'Unknown',
+                                'confidence': 0.0,
+                                'severity': 'Low',
+                                'predicted_duration': 'Unknown',
+                                'anomaly_detected': False,
+                                'anomaly_score': 0.0,
+                                'model_version': 'fallback-v1.0'
+                            },
+                            'ml_available': False
+                        })
+                        
+                except requests.exceptions.RequestException:
+                    # Connection failed - add fallback
+                    predictions.append({
+                        'sensor_id': sensor_id,
+                        'timestamp': format_value(data_row.window_start),
+                        'input_data': {
+                            'vehicle_count': float(data_row.vehicle_count_per_min or 0),
+                            'avg_speed': float(data_row.avg_speed_kmh or 0),
+                            'wait_time_s': float(data_row.avg_wait_time_s or 0)
+                        },
+                        'predictions': {
+                            'traffic_state': 'Unknown',
+                            'confidence': 0.0,
+                            'severity': 'Low',
+                            'predicted_duration': 'Unknown',
+                            'anomaly_detected': False,
+                            'anomaly_score': 0.0,
+                            'model_version': 'fallback-v1.0'
+                        },
+                        'ml_available': False
+                    })
+        
+        cluster.shutdown()
+        
+        # Calculate summary statistics
+        total_predictions = len(predictions)
+        available_predictions = sum(1 for p in predictions if p['ml_available'])
+        anomaly_count = sum(1 for p in predictions if p['predictions'].get('anomaly_detected', False))
+        
+        # Traffic state distribution
+        state_distribution = {}
+        confidence_scores = []
+        
+        for prediction in predictions:
+            state = prediction['predictions'].get('traffic_state', 'Unknown')
+            state_distribution[state] = state_distribution.get(state, 0) + 1
+            
+            confidence = prediction['predictions'].get('confidence', 0.0)
+            if confidence > 0:
+                confidence_scores.append(confidence)
+        
+        avg_confidence = sum(confidence_scores) / len(confidence_scores) if confidence_scores else 0.0
+        
+        return jsonify({
+            'predictions': predictions,
+            'summary': {
+                'total_sensors': total_predictions,
+                'ml_available_count': available_predictions,
+                'ml_availability_rate': (available_predictions / total_predictions * 100) if total_predictions > 0 else 0,
+                'anomaly_count': anomaly_count,
+                'anomaly_rate': (anomaly_count / total_predictions * 100) if total_predictions > 0 else 0,
+                'avg_confidence': round(avg_confidence, 3),
+                'state_distribution': state_distribution
+            },
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        cluster.shutdown()
+        return jsonify({"error": str(e)}), 500
+
+@api_bp.route('/ml/health', methods=['GET'])
+def check_ml_health():
+    """Check if ML API service is available"""
+    try:
+        import requests
+        response = requests.get('http://localhost:8090/health', timeout=3)
+        
+        if response.status_code == 200:
+            ml_health = response.json()
+            return jsonify({
+                'ml_api_available': True,
+                'ml_api_status': ml_health,
+                'spark_ml_integration': True
+            })
+        else:
+            return jsonify({
+                'ml_api_available': False,
+                'error': f'ML API returned status {response.status_code}',
+                'spark_ml_integration': False
+            }), 503
+            
+    except requests.exceptions.RequestException as e:
+        return jsonify({
+            'ml_api_available': False,
+            'error': f'Cannot connect to ML API: {str(e)}',
+            'spark_ml_integration': False
+        }), 503
+
+@api_bp.route('/ml/models/info', methods=['GET'])
+def get_ml_models_info():
+    """Get information about available ML models"""
+    try:
+        import requests
+        response = requests.get('http://localhost:8090/models/info', timeout=5)
+        
+        if response.status_code == 200:
+            return jsonify(response.json())
+        else:
+            return jsonify({
+                'error': 'ML API models info unavailable',
+                'fallback_info': {
+                    'service': 'ML API Service (Unavailable)',
+                    'model_type': 'Hybrid AI System',
+                    'components': {
+                        'pattern_discovery': 'K-Means Clustering',
+                        'classification': 'Random Forest',
+                        'anomaly_detection': 'Isolation Forest'
+                    }
+                }
+            }), 503
+            
+    except requests.exceptions.RequestException:
+        return jsonify({
+            'error': 'Cannot connect to ML API service',
+            'fallback_info': {
+                'service': 'ML API Service (Connection Failed)',
+                'model_type': 'Hybrid AI System',
+                'components': {
+                    'pattern_discovery': 'K-Means Clustering',
+                    'classification': 'Random Forest', 
+                    'anomaly_detection': 'Isolation Forest'
+                }
+            }
+        }), 503 

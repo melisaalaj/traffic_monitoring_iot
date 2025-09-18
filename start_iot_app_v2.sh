@@ -11,7 +11,12 @@ detect_installations() {
     # Detect Kafka
     KAFKA_BIN=""
     KAFKA_DIR=""
-    if command -v kafka-server-start.sh >/dev/null 2>&1; then
+    # Check for Homebrew Kafka first (without .sh extension)
+    if command -v kafka-server-start >/dev/null 2>&1; then
+        KAFKA_BIN=$(which kafka-server-start)
+        KAFKA_DIR=$(dirname $(dirname "$KAFKA_BIN"))
+    # Check for traditional installations with .sh extension
+    elif command -v kafka-server-start.sh >/dev/null 2>&1; then
         KAFKA_BIN=$(which kafka-server-start.sh)
         KAFKA_DIR=$(dirname $(dirname "$KAFKA_BIN"))
     elif [ -f "/usr/local/kafka/bin/kafka-server-start.sh" ]; then
@@ -20,6 +25,10 @@ detect_installations() {
     elif [ -f "/opt/kafka/bin/kafka-server-start.sh" ]; then
         KAFKA_BIN="/opt/kafka/bin/kafka-server-start.sh"
         KAFKA_DIR="/opt/kafka"
+    # Check Homebrew specific paths
+    elif [ -f "/opt/homebrew/bin/kafka-server-start" ]; then
+        KAFKA_BIN="/opt/homebrew/bin/kafka-server-start"
+        KAFKA_DIR="/opt/homebrew/opt/kafka"
     else
         echo "❌ Kafka not found. Please install Kafka first."
         exit 1

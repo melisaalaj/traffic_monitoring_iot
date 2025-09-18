@@ -8,6 +8,7 @@ import Overview from './components/Overview';
 import DataTables from './components/DataTables';
 import TrafficMonitoring from './components/TrafficMonitoring';
 import Visuals from './components/Visuals';
+import MLDashboard from './components/MLDashboard';
 
 const Container = styled.div`
   max-width: 1800px;
@@ -113,6 +114,10 @@ const App = () => {
       
       {activeTab === 'tables' && (
         <DataTables />
+      )}
+      
+      {activeTab === 'ml-predictions' && (
+        <MLDashboard />
       )}
     </Container>
   );

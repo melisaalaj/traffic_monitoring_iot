@@ -56,6 +56,12 @@ const TabNavigation = ({ activeTab, onTabChange }) => {
       >
         Data Tables
       </Tab>
+      <Tab 
+        active={activeTab === 'ml-predictions'} 
+        onClick={() => onTabChange('ml-predictions')}
+      >
+        🤖 AI Predictions
+      </Tab>
     </TabsContainer>
   );
 };
