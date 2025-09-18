@@ -39,7 +39,7 @@ DDL = [
     );
     """,
 
-    # 2) 1-minute aggregates per sensor (written by Spark)
+    # 2) 1-minute aggregates per sensor with AI classification (written by Spark)
     f"""
     CREATE TABLE IF NOT EXISTS {KEYSPACE}.aggregates_minute (
       sensor_id text,
@@ -52,8 +52,53 @@ DDL = [
       temp_c double,
       status text,        /* OK | WARN | ALERT */
       breaches set<text>, /* which rules fired */
+      
+      /* AI Classification Fields */
+      ai_traffic_state text,           /* Free Flow, Light Traffic, Heavy Congestion, Gridlock */
+      ai_confidence double,            /* 0.0 to 1.0 confidence score */
+      ai_severity text,               /* Low, Medium, High, Critical */
+      ai_predicted_duration text,     /* e.g., "20-45 minutes" */
+      ai_anomaly_detected boolean,    /* true if anomaly detected */
+      ai_anomaly_score double,        /* anomaly confidence score */
+      ai_model_version text,          /* track which AI model version was used */
+      ai_features map<text, double>,  /* store key AI features for debugging */
+      
       PRIMARY KEY ((sensor_id), window_start)
     ) WITH CLUSTERING ORDER BY (window_start DESC);
+    """,
+    
+    # 3) AI Training Data Table (for continuous learning)
+    f"""
+    CREATE TABLE IF NOT EXISTS {KEYSPACE}.ai_training_data (
+      training_id uuid,
+      sensor_id text,
+      timestamp timestamp,
+      vehicle_count double,
+      avg_speed double,
+      wait_time_s double,
+      hour int,
+      is_rush_hour boolean,
+      is_weekend boolean,
+      discovered_pattern text,     /* pattern discovered by unsupervised learning */
+      pattern_confidence double,   /* confidence in pattern discovery */
+      used_for_training boolean,   /* whether this sample was used for training */
+      PRIMARY KEY ((sensor_id), timestamp, training_id)
+    ) WITH CLUSTERING ORDER BY (timestamp DESC);
+    """,
+    
+    # 4) AI Model Performance Tracking
+    f"""
+    CREATE TABLE IF NOT EXISTS {KEYSPACE}.ai_model_stats (
+      model_type text,             /* pattern_discovery, classifier, anomaly_detector */
+      date date,
+      training_samples int,
+      accuracy_score double,
+      precision_score double,
+      recall_score double,
+      model_version text,
+      last_updated timestamp,
+      PRIMARY KEY ((model_type), date)
+    ) WITH CLUSTERING ORDER BY (date DESC);
     """
 ]
 
