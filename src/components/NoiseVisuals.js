@@ -119,9 +119,10 @@ const NoiseVisuals = ({ sensors }) => {
   const loadHistoricalData = async () => {
     try {
       const response = await axios.get('/api/noise/historical?period=day');
-      setHistoricalData(response.data.historical_data);
+      setHistoricalData(response.data.historical_data || []);
     } catch (err) {
       console.error('Error loading noise historical data:', err);
+      setHistoricalData([]);
     }
   };
 
@@ -278,14 +279,16 @@ const NoiseVisuals = ({ sensors }) => {
       noiseCategorization: noiseCategorizationData,
       noiseComparison: noiseComparisonData
     });
-  }, [getNoiseLevel, getNoiseColor]);
+  }, []); // Remove dependencies that cause re-renders
 
   useEffect(() => {
     if (sensors && sensors.length > 0) {
       const noiseSensors = sensors.filter(s => s.sensor_type === 'noise');
-      generateChartData(noiseSensors);
+      if (noiseSensors.length > 0) {
+        generateChartData(noiseSensors);
+      }
     }
-  }, [sensors, generateChartData]);
+  }, [sensors, generateChartData]); // Remove historicalData dependency
 
   const calculateStats = () => {
     const noiseSensors = sensors.filter(s => s.sensor_type === 'noise');
@@ -398,8 +401,12 @@ const NoiseVisuals = ({ sensors }) => {
         <ChartCard>
           <ChartTitle>🔊 Noise Levels by Sensor</ChartTitle>
           <ChartWrapper>
-            {chartData.noiseLevels && (
+            {chartData.noiseLevels ? (
               <Line data={chartData.noiseLevels} options={chartOptions} />
+            ) : (
+              <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px', color: '#666'}}>
+                Loading noise level data...
+              </div>
             )}
           </ChartWrapper>
         </ChartCard>
@@ -407,8 +414,12 @@ const NoiseVisuals = ({ sensors }) => {
         <ChartCard>
           <ChartTitle>📊 Noise Level Distribution</ChartTitle>
           <ChartWrapper>
-            {chartData.noiseDistribution && (
+            {chartData.noiseDistribution ? (
               <Bar data={chartData.noiseDistribution} options={chartOptions} />
+            ) : (
+              <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px', color: '#666'}}>
+                Loading distribution data...
+              </div>
             )}
           </ChartWrapper>
         </ChartCard>
@@ -416,8 +427,12 @@ const NoiseVisuals = ({ sensors }) => {
         <ChartCard>
           <ChartTitle>🎯 Noise Categorization</ChartTitle>
           <ChartWrapper>
-            {chartData.noiseCategorization && (
+            {chartData.noiseCategorization ? (
               <Doughnut data={chartData.noiseCategorization} options={doughnutOptions} />
+            ) : (
+              <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px', color: '#666'}}>
+                Loading categorization data...
+              </div>
             )}
           </ChartWrapper>
         </ChartCard>
@@ -425,8 +440,12 @@ const NoiseVisuals = ({ sensors }) => {
         <ChartCard>
           <ChartTitle>📏 Comparison with Standards</ChartTitle>
           <ChartWrapper>
-            {chartData.noiseComparison && (
+            {chartData.noiseComparison ? (
               <Radar data={chartData.noiseComparison} options={radarOptions} />
+            ) : (
+              <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px', color: '#666'}}>
+                Loading comparison data...
+              </div>
             )}
           </ChartWrapper>
         </ChartCard>

@@ -548,6 +548,7 @@ def get_historical_air_quality():
     
     limit_map = {
         '1hour': 60,
+        'day': 1440,
         '2days': 2880,
         '1week': 10080
     }
@@ -600,6 +601,7 @@ def get_historical_noise():
     
     limit_map = {
         '1hour': 60,
+        'day': 1440,
         '2days': 2880,
         '1week': 10080
     }

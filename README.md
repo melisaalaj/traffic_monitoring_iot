@@ -1,6 +1,6 @@
-# Real-Time IoT Traffic Monitoring System
+# Real-Time IoT Traffic Monitoring System with AI/ML Integration
 
-A comprehensive real-time data processing and visualization system for IoT sensor data using **Apache Kafka**, **Enhanced Streaming Processing**, **Apache Cassandra**, and **React Dashboard**.
+A comprehensive real-time data processing and visualization system for IoT sensor data using **Apache Kafka**, **Apache Spark**, **Machine Learning APIs**, **Enhanced Streaming Processing**, **Apache Cassandra**, and **React Dashboard** with **AI-powered traffic predictions**.
 
 ## 🏗️ Architecture Overview
 
@@ -12,11 +12,13 @@ A comprehensive real-time data processing and visualization system for IoT senso
     ↓
 🚀 Apache Kafka (Message Queue)
     ↓  
-⚡ Enhanced Streaming Processor
+⚡ Enhanced Streaming Processor + 🔥 Apache Spark ML Pipeline
    • Sliding Windows (10min + last 20 measurements)
    • Data Validation & Range Checking
    • Anomaly Detection (traffic spikes)
    • Real-time Aggregation (avg, min, max, count)
+   • 🤖 AI Traffic Predictions (K-Means + Random Forest + Isolation Forest)
+   • 🌐 ML API Service (Flask) - Real-time ML predictions
     ↓
 💾 Apache Cassandra (Time-Series Database)
     ↓
@@ -26,14 +28,16 @@ A comprehensive real-time data processing and visualization system for IoT senso
    • SMS notifications via Twilio
    • Alert storage and management
     ↓
-🌐 Flask API Server (REST Endpoints)
+🌐 Flask API Server (REST Endpoints + ML Endpoints)
     ↓
-⚛️ React Dashboard (Real-time Visualization)
+⚛️ React Dashboard (Real-time Visualization + AI Predictions)
    • Alert Dashboard
    • Interactive Maps (Leaflet)
    • Data Visualizations (Chart.js)
    • Traffic Monitoring
    • Sensor Analytics
+   • 🤖 AI Traffic Predictions Dashboard
+   • 🎯 ML-enhanced Sensor Cards
 ```
 
 ## ✨ Features
@@ -44,12 +48,25 @@ A comprehensive real-time data processing and visualization system for IoT senso
 - **Data Validation**: Automatic range checking and error detection
 - **Anomaly Detection**: Traffic spike detection and pattern analysis
 
+### 🤖 AI/ML Integration
+- **Apache Spark Streaming**: Real-time ML pipeline with micro-batch processing
+- **Hybrid ML Models**: K-Means clustering + Random Forest classification + Isolation Forest anomaly detection
+- **ML API Service**: Flask-based API serving trained models on port 8090
+- **Real-time Predictions**: Traffic state classification (Free Flow, Light Traffic, Heavy Congestion, Gridlock)
+- **Confidence Scoring**: AI prediction confidence levels (0-100%)
+- **Anomaly Detection**: ML-powered traffic anomaly identification
+- **Model Versioning**: Hybrid AI system with fallback mechanisms
+
 ### 📊 Interactive Dashboard
 - **React Frontend**: Modern, responsive web interface
 - **Real-time Updates**: Live data refresh every 30 seconds
 - **Interactive Maps**: Click sensors to focus and filter
 - **Data Visualizations**: Charts and graphs for all sensor types
 - **Traffic Monitoring**: Dedicated traffic analytics with granular controls
+- **🤖 AI Predictions Tab**: Comprehensive ML dashboard with prediction cards
+- **🎯 ML-Enhanced Sensor Cards**: Real-time AI predictions displayed on sensor cards
+- **🚨 Anomaly Indicators**: Visual alerts for ML-detected anomalies
+- **📊 Confidence Metrics**: AI prediction accuracy visualization
 
 ### 🎛️ Advanced Analytics
 - **Multi-Granularity Views**: 1min, 5min, 30min, 1hour, 1day intervals
@@ -71,9 +88,11 @@ A comprehensive real-time data processing and visualization system for IoT senso
 
 - **Operating System**: macOS (tested on 15.5) or Linux (Ubuntu 20.04+, CentOS 8+)
 - **Package Manager**: Homebrew (macOS) or apt/yum (Linux)
-- **Python 3.11+**
+- **Python 3.11+** with ML libraries (scikit-learn, joblib, numpy)
 - **Node.js 16+** (for React dashboard)
-- **Java 17+** (for Kafka and Cassandra)
+- **Java 17+** (for Kafka, Cassandra, and Spark)
+- **Apache Spark 3.5.0+** (for ML pipeline)
+- **PySpark 3.5.0** (Python Spark integration)
 
 ## 🚀 Quick Start
 
@@ -119,8 +138,8 @@ brew install cassandra
 # Install Node.js (for React dashboard)
 brew install node
 
-# Install Python packages
-pip install kafka-python cassandra-driver confluent-kafka flask flask-cors
+# Install Python packages (including ML libraries)
+pip install kafka-python cassandra-driver confluent-kafka flask flask-cors pyspark==3.5.0 scikit-learn joblib numpy requests
 ```
 
 **Linux (Ubuntu/Debian)**
@@ -146,8 +165,8 @@ curl https://downloads.apache.org/cassandra/KEYS | sudo apt-key add -
 sudo apt update
 sudo apt install cassandra
 
-# Install Python packages
-pip3 install kafka-python cassandra-driver confluent-kafka flask flask-cors
+# Install Python packages (including ML libraries)
+pip3 install kafka-python cassandra-driver confluent-kafka flask flask-cors pyspark==3.5.0 scikit-learn joblib numpy requests
 ```
 
 #### Step 2: Setup Data Infrastructure
@@ -170,10 +189,29 @@ npm install
 
 We provide multiple ways to run the application depending on your needs:
 
-### 🚀 Production Mode (Recommended)
+### 🤖 Full ML-Enhanced System (Recommended)
 
 ```bash
-# Start the complete IoT application in production mode
+# Start the complete ML-enhanced IoT system
+./start_full_ml_system.sh
+```
+
+**What this starts:**
+- 🤖 **ML API Service**: Flask API serving trained models (port 8090)
+- 📡 **Simulator**: Generates data for 60 sensors
+- ⚡ **Streaming Pipeline**: Processes and stores data in real-time
+- 🔥 **Spark ML Pipeline**: Real-time ML predictions with API calls
+- 🚨 **Alert Engine**: Real-time threshold monitoring
+- 📱 **SMS Service**: Twilio notifications
+- 🌐 **Flask API Server**: Serves REST + ML endpoints (port 5002)
+- ⚛️ **React Dashboard**: Production build with AI predictions (port 5002)
+
+**Access the dashboard:** http://localhost:5002
+
+### 🚀 Standard Production Mode
+
+```bash
+# Start the complete IoT application without ML features
 ./start_iot_app_v2.sh
 ```
 
@@ -184,6 +222,19 @@ We provide multiple ways to run the application depending on your needs:
 - ⚛️ **React Dashboard**: Production build (port 5002)
 
 **Access the dashboard:** http://localhost:5002
+
+### 🔬 ML Pipeline Only
+
+```bash
+# Start only the ML pipeline for testing
+./start_ml_api_pipeline.sh
+```
+
+**What this starts:**
+- 🤖 **ML API Service**: Flask API serving trained models (port 8090)
+- 🔥 **Spark Streaming**: Real-time ML predictions
+
+**Access ML API:** http://localhost:8090/health
 
 ### 🛠️ Development Mode (Hot Reload)
 
@@ -203,11 +254,17 @@ We provide multiple ways to run the application depending on your needs:
 ### 🛑 Stopping the Application
 
 ```bash
-# Stop production mode
+# Stop ML-enhanced system
+./stop_full_ml_system.sh
+
+# Stop standard production mode
 ./stop_iot_app_v2.sh
 
 # Stop development mode
 ./stop_iot_app_dev.sh
+
+# Stop ML pipeline only
+./stop_ml_api_pipeline.sh
 ```
 
 ## 📱 Dashboard Features
@@ -229,6 +286,14 @@ We provide multiple ways to run the application depending on your needs:
 - **Paginated Tables**: Browse all sensor data with pagination
 - **Search & Filter**: Find specific sensors and time periods
 - **Export Capabilities**: Download data for analysis
+
+### 🤖 AI Predictions Tab
+- **ML Dashboard**: Comprehensive AI prediction overview
+- **Traffic State Cards**: Individual sensor predictions with confidence scores
+- **Anomaly Detection**: Visual indicators for ML-detected anomalies
+- **Model Information**: AI model versions and performance metrics
+- **Real-time Updates**: Live ML predictions with 30-second refresh
+- **Status Monitoring**: ML API service health and availability
 
 ### 🎛️ Advanced Controls
 - **Time Period Selection**: 1 hour, 2 days, 1 week historical views
@@ -263,10 +328,21 @@ iot-traffic-monitoring/
 ├── alert_config.py                   # Alert thresholds and Twilio configuration
 ├── alert_endpoints.py                # Alert API endpoints
 ├── dashboard_react.py                # Flask server for React dashboard
-├── api_endpoints.py                  # REST API endpoints
+├── api_endpoints.py                  # REST API endpoints (includes ML endpoints)
 ├── setup_kafka_topics.py            # Kafka topic creation
 ├── setup_cassandra.py               # Database schema setup
 ├── populate_sensors.py              # Sensor metadata population
+│
+├── 🤖 ML/AI Components
+├── train_models_for_spark.py         # AI model training for Spark
+├── ai_traffic_classifier.py          # Hybrid ML system (K-Means + Random Forest + Isolation Forest)
+├── ml_api_service.py                 # Flask API serving trained models
+├── spark_with_api_calls.py           # Spark streaming with ML API integration
+├── start_ml_api_pipeline.sh          # ML pipeline startup script
+├── stop_ml_api_pipeline.sh           # ML pipeline shutdown script
+├── start_full_ml_system.sh           # Full ML-enhanced system startup
+├── stop_full_ml_system.sh            # Full ML-enhanced system shutdown
+├── download_jars.sh                  # Spark-Kafka connector JAR downloader
 │
 ├── ⚛️ React Frontend
 ├── package.json                      # Node.js dependencies
@@ -290,7 +366,9 @@ iot-traffic-monitoring/
         ├── TrafficVisuals.js         # Traffic charts and graphs
         ├── AirQualityVisuals.js      # Air quality visualizations
         ├── NoiseVisuals.js           # Noise level analytics
-        └── TrafficMonitoring.js      # Dedicated traffic dashboard
+        ├── TrafficMonitoring.js      # Dedicated traffic dashboard
+        ├── MLDashboard.js            # AI predictions dashboard
+        └── MLIndicator.js            # ML prediction indicators for sensor cards
 │
 └── 📊 Legacy Files
     └── templates/
@@ -315,14 +393,28 @@ iot-traffic-monitoring/
   - alerts - Alert storage with severity, thresholds, and resolution status
 
 ### API Endpoints
+
+#### Main Dashboard API
 - **Base URL**: `http://localhost:5002` (production) or `http://localhost:5010` (development)
 - **Main Data**: `GET /api/data` - Current sensor data and statistics
 - **Table Data**: `GET /api/table_data` - Paginated sensor data
 - **Historical Traffic**: `GET /api/traffic/historical?period=1hour&granularity=1min`
 - **Historical Air Quality**: `GET /api/air_quality/historical?period=1hour&granularity=1min`
 - **Historical Noise**: `GET /api/noise/historical?period=1hour&granularity=1min`
- - **Active Alerts**: `GET /api/alerts/active` - Current unresolved alerts
+- **Active Alerts**: `GET /api/alerts/active` - Current unresolved alerts
 - **Alert Statistics**: `GET /api/alerts/stats` - Alert counts and statistics
+
+#### ML/AI API Endpoints
+- **ML Health Check**: `GET /api/ml/health` - ML API service status
+- **All ML Predictions**: `GET /api/ml/predictions` - All traffic sensor predictions
+- **Single Prediction**: `GET /api/ml/predict/<sensor_id>` - Specific sensor prediction
+- **Model Information**: `GET /api/ml/models/info` - ML model details
+
+#### Direct ML API Service (Port 8090)
+- **Health Check**: `GET /health` - ML service health
+- **Single Prediction**: `POST /predict` - Real-time traffic prediction
+- **Batch Predictions**: `POST /predict/batch` - Multiple predictions
+- **Model Info**: `GET /models/info` - Detailed model information
 
 ### React Configuration
 
@@ -421,6 +513,20 @@ curl http://localhost:5002/api/data | jq
 
 # Test historical data
 curl "http://localhost:5002/api/traffic/historical?period=1hour&granularity=5min" | jq
+
+# Test ML API health
+curl http://localhost:5002/api/ml/health | jq
+
+# Test ML predictions
+curl http://localhost:5002/api/ml/predictions | jq
+
+# Test direct ML API service
+curl http://localhost:8090/health | jq
+
+# Test single ML prediction
+curl -X POST http://localhost:8090/predict \
+  -H "Content-Type: application/json" \
+  -d '{"vehicle_count": 25, "avg_speed": 35, "wait_time_s": 20}' | jq
 ```
 
 ### React Development Tools

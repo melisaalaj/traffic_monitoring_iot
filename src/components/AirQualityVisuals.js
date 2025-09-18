@@ -173,9 +173,10 @@ const AirQualityVisuals = ({ sensors }) => {
     setLoading(true);
     try {
       const response = await axios.get(`/api/air_quality/historical?period=${period}&granularity=${granularityLevel}`);
-      setHistoricalData(response.data.historical_data);
+      setHistoricalData(response.data.historical_data || []);
     } catch (err) {
       console.error('Error loading air quality historical data:', err);
+      setHistoricalData([]); // Set empty array on error
     } finally {
       setLoading(false);
     }
@@ -223,13 +224,17 @@ const AirQualityVisuals = ({ sensors }) => {
       ]
     };
 
-    // Temperature Distribution using real historical data
+    // Temperature Distribution using historical data or current sensor data as fallback
     const tempRanges = ['<10°C', '10-15°C', '16-20°C', '21-25°C', '26-30°C', '>30°C'];
     const tempCounts = [0, 0, 0, 0, 0, 0];
     
-    historicalData.forEach(item => {
-      if (item.temp_c !== '-' && item.temp_c !== null) {
-        const temp = parseFloat(item.temp_c) || 0;
+    // Use historical data if available, otherwise use current sensor data
+    const tempDataSource = historicalData.length > 0 ? historicalData : airSensors;
+    
+    tempDataSource.forEach(item => {
+      const tempValue = historicalData.length > 0 ? item.temp_c : item.temp_c;
+      if (tempValue !== '-' && tempValue !== null) {
+        const temp = parseFloat(tempValue) || 0;
         if (temp < 10) tempCounts[0]++;
         else if (temp <= 15) tempCounts[1]++;
         else if (temp <= 20) tempCounts[2]++;
@@ -243,7 +248,7 @@ const AirQualityVisuals = ({ sensors }) => {
       labels: tempRanges,
       datasets: [
         {
-          label: 'Number of Sensors',
+          label: historicalData.length > 0 ? 'Historical Data Points' : 'Current Sensors',
           data: tempCounts,
           backgroundColor: [
             '#3498db',
@@ -266,11 +271,14 @@ const AirQualityVisuals = ({ sensors }) => {
       ]
     };
 
-    // Air Quality Index Distribution using real historical data
+    // Air Quality Index Distribution using historical data or current sensor data as fallback
     const aqiCounts = { Good: 0, Moderate: 0, 'Unhealthy for Sensitive': 0, Unhealthy: 0, 'Very Unhealthy': 0 };
-    historicalData.forEach(item => {
-      if (item.pm25 !== '-' && item.pm25 !== null) {
-        const pm25 = parseFloat(item.pm25) || 0;
+    const aqiDataSource = historicalData.length > 0 ? historicalData : airSensors;
+    
+    aqiDataSource.forEach(item => {
+      const pm25Value = historicalData.length > 0 ? item.pm25 : item.pm25;
+      if (pm25Value !== '-' && pm25Value !== null) {
+        const pm25 = parseFloat(pm25Value) || 0;
         const level = getAirQualityLevel(pm25);
         aqiCounts[level]++;
       }
@@ -334,9 +342,11 @@ const AirQualityVisuals = ({ sensors }) => {
   }, []);
 
   useEffect(() => {
-    if (sensors && sensors.length > 0 && historicalData.length > 0) {
+    if (sensors && sensors.length > 0) {
       const airSensors = sensors.filter(s => s.sensor_type === 'air_quality');
-      generateChartData(airSensors);
+      if (airSensors.length > 0) {
+        generateChartData(airSensors);
+      }
     }
   }, [sensors, historicalData, generateChartData]);
 

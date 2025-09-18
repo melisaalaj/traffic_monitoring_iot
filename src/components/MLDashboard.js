@@ -4,10 +4,12 @@ import axios from 'axios';
 
 const MLContainer = styled.div`
   padding: 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #ffffff;
   border-radius: 12px;
   margin-bottom: 20px;
-  color: white;
+  color: #2c3e50;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e1e8ed;
 `;
 
 const MLHeader = styled.div`
@@ -25,12 +27,17 @@ const MLHeader = styled.div`
 `;
 
 const StatusBadge = styled.span`
-  padding: 4px 12px;
+  padding: 6px 14px;
   border-radius: 20px;
   font-size: 12px;
-  font-weight: bold;
-  background: ${props => props.available ? '#4CAF50' : '#f44336'};
-  color: white;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: ${props => props.available ? 
+    'linear-gradient(135deg, #d4edda, #c3e6cb)' : 
+    'linear-gradient(135deg, #f8d7da, #f5c6cb)'};
+  color: ${props => props.available ? '#155724' : '#721c24'};
+  border: 1px solid ${props => props.available ? '#c3e6cb' : '#f5c6cb'};
 `;
 
 const StatsGrid = styled.div`
@@ -41,26 +48,39 @@ const StatsGrid = styled.div`
 `;
 
 const StatCard = styled.div`
-  background: rgba(255, 255, 255, 0.1);
-  padding: 15px;
-  border-radius: 8px;
-  backdrop-filter: blur(10px);
+  background: linear-gradient(135deg, #f8f9fa, #ffffff);
+  padding: 18px;
+  border-radius: 12px;
+  border: 1px solid #e9ecef;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    border-color: #dee2e6;
+  }
   
   .stat-label {
     font-size: 12px;
-    opacity: 0.8;
-    margin-bottom: 5px;
+    margin-bottom: 8px;
+    color: #6c757d;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
   
   .stat-value {
-    font-size: 24px;
-    font-weight: bold;
+    font-size: 28px;
+    font-weight: 700;
     margin-bottom: 5px;
+    color: #2c3e50;
   }
   
   .stat-subtitle {
     font-size: 11px;
-    opacity: 0.7;
+    color: #868e96;
+    font-weight: 400;
   }
 `;
 
@@ -72,52 +92,80 @@ const PredictionsGrid = styled.div`
 `;
 
 const PredictionCard = styled.div`
-  background: rgba(255, 255, 255, 0.95);
-  color: #333;
+  background: #ffffff;
+  color: #2c3e50;
   padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e1e8ed;
+  transition: all 0.3s ease;
   
   &:hover {
-    transform: translateY(-2px);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
   }
 `;
 
 const SensorHeader = styled.div`
   display: flex;
-  justify-content: between;
+  justify-content: space-between;
   align-items: center;
   margin-bottom: 15px;
   
   .sensor-id {
-    font-weight: bold;
-    color: #2196F3;
+    font-weight: 700;
+    color: #2c3e50;
+    font-size: 16px;
   }
   
   .ml-status {
-    font-size: 12px;
-    padding: 2px 8px;
-    border-radius: 12px;
-    background: ${props => props.available ? '#4CAF50' : '#ff9800'};
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 15px;
+    background: ${props => props.available ? 
+      'linear-gradient(135deg, #27ae60, #2ecc71)' : 
+      'linear-gradient(135deg, #f39c12, #e67e22)'};
     color: white;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 `;
 
 const TrafficState = styled.div`
   text-align: center;
   margin: 15px 0;
+  padding: 15px;
+  background: ${props => {
+    switch(props.state) {
+      case 'Free Flow': return 'linear-gradient(135deg, #d4edda, #c3e6cb)';
+      case 'Light Traffic': return 'linear-gradient(135deg, #fff3cd, #ffeaa7)';
+      case 'Heavy Congestion': return 'linear-gradient(135deg, #f8d7da, #f5c6cb)';
+      case 'Gridlock': return 'linear-gradient(135deg, #f8d7da, #f1b0b7)';
+      default: return 'linear-gradient(135deg, #e2e3e5, #d6d8db)';
+    }
+  }};
+  border-radius: 10px;
+  border: 1px solid ${props => {
+    switch(props.state) {
+      case 'Free Flow': return '#c3e6cb';
+      case 'Light Traffic': return '#ffeaa7';
+      case 'Heavy Congestion': return '#f5c6cb';
+      case 'Gridlock': return '#f1b0b7';
+      default: return '#d6d8db';
+    }
+  }};
   
   .state {
     font-size: 18px;
-    font-weight: bold;
+    font-weight: 700;
     color: ${props => {
       switch(props.state) {
-        case 'Free Flow': return '#4CAF50';
-        case 'Light Traffic': return '#8BC34A';
-        case 'Heavy Congestion': return '#FF9800';
-        case 'Gridlock': return '#f44336';
-        default: return '#757575';
+        case 'Free Flow': return '#155724';
+        case 'Light Traffic': return '#856404';
+        case 'Heavy Congestion': return '#721c24';
+        case 'Gridlock': return '#721c24';
+        default: return '#6c757d';
       }
     }};
     margin-bottom: 5px;
@@ -125,30 +173,33 @@ const TrafficState = styled.div`
   
   .confidence {
     font-size: 14px;
-    color: #666;
+    color: #6c757d;
+    font-weight: 500;
   }
 `;
 
 const PredictionDetails = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 12px;
   font-size: 12px;
+  margin: 15px 0;
   
   .detail {
     display: flex;
     justify-content: space-between;
-    padding: 5px 0;
-    border-bottom: 1px solid #eee;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
   }
   
   .label {
     font-weight: 500;
-    color: #666;
+    color: #7f8c8d;
   }
   
   .value {
-    font-weight: bold;
+    font-weight: 600;
+    color: #2c3e50;
   }
 `;
 
@@ -156,14 +207,17 @@ const AnomalyBadge = styled.div`
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 5px 10px;
-  border-radius: 15px;
+  padding: 6px 12px;
+  border-radius: 20px;
   font-size: 12px;
-  font-weight: bold;
+  font-weight: 600;
   margin-top: 10px;
-  background: ${props => props.anomaly ? '#ffebee' : '#e8f5e8'};
-  color: ${props => props.anomaly ? '#c62828' : '#2e7d32'};
-  border: 1px solid ${props => props.anomaly ? '#f8bbd9' : '#c8e6c9'};
+  background: ${props => props.anomaly ? 
+    'linear-gradient(135deg, #ffebee, #ffcdd2)' : 
+    'linear-gradient(135deg, #e8f5e8, #c8e6c9)'};
+  color: ${props => props.anomaly ? '#d32f2f' : '#388e3c'};
+  border: 1px solid ${props => props.anomaly ? '#ffcdd2' : '#a5d6a7'};
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 `;
 
 const LoadingSpinner = styled.div`
@@ -173,11 +227,11 @@ const LoadingSpinner = styled.div`
   height: 100px;
   
   .spinner {
-    border: 3px solid rgba(255, 255, 255, 0.3);
+    border: 3px solid #f0f0f0;
     border-radius: 50%;
-    border-top: 3px solid white;
-    width: 30px;
-    height: 30px;
+    border-top: 3px solid #3498db;
+    width: 35px;
+    height: 35px;
     animation: spin 1s linear infinite;
   }
   
@@ -188,12 +242,14 @@ const LoadingSpinner = styled.div`
 `;
 
 const ErrorMessage = styled.div`
-  background: rgba(244, 67, 54, 0.1);
-  color: #f44336;
-  padding: 15px;
-  border-radius: 8px;
+  background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+  color: #721c24;
+  padding: 20px;
+  border-radius: 12px;
   text-align: center;
   margin: 20px 0;
+  border: 1px solid #f5c6cb;
+  font-weight: 500;
 `;
 
 const MLDashboard = () => {
