@@ -55,6 +55,43 @@ service_running() {
     fi
 }
 
+# Detect existing installations (for flexible setup)
+detect_existing_installations() {
+    print_status "Detecting existing installations..."
+    
+    # Detect Kafka
+    KAFKA_BIN=""
+    KAFKA_DIR=""
+    if command_exists kafka-server-start.sh; then
+        KAFKA_BIN=$(which kafka-server-start.sh)
+        KAFKA_DIR=$(dirname $(dirname "$KAFKA_BIN"))
+        print_success "Found existing Kafka at: $KAFKA_BIN"
+    elif [ -f "/usr/local/kafka/bin/kafka-server-start.sh" ]; then
+        KAFKA_BIN="/usr/local/kafka/bin/kafka-server-start.sh"
+        KAFKA_DIR="/usr/local/kafka"
+        print_success "Found existing Kafka at: $KAFKA_BIN"
+    elif [ -f "/opt/kafka/bin/kafka-server-start.sh" ]; then
+        KAFKA_BIN="/opt/kafka/bin/kafka-server-start.sh"
+        KAFKA_DIR="/opt/kafka"
+        print_success "Found existing Kafka at: $KAFKA_BIN"
+    fi
+    
+    # Detect Cassandra
+    CASSANDRA_BIN=""
+    if command_exists cassandra; then
+        CASSANDRA_BIN=$(which cassandra)
+        print_success "Found existing Cassandra at: $CASSANDRA_BIN"
+    elif [ -f "/usr/sbin/cassandra" ]; then
+        CASSANDRA_BIN="/usr/sbin/cassandra"
+        print_success "Found existing Cassandra at: $CASSANDRA_BIN"
+    fi
+    
+    # Export for use in other functions
+    export KAFKA_BIN
+    export KAFKA_DIR
+    export CASSANDRA_BIN
+}
+
 # Install Java if not present
 install_java() {
     if command_exists java; then
@@ -93,7 +130,7 @@ install_python_deps() {
         print_warning "Not in a virtual environment. Consider using one."
     fi
     
-    pip3 install kafka-python cassandra-driver flask
+    pip3 install kafka-python cassandra-driver flask flask-cors
     print_success "Python dependencies installed"
 }
 
@@ -121,14 +158,18 @@ setup_kafka() {
         fi
         
     else
-        # Linux installation
-        if ! command_exists /opt/kafka/bin/kafka-server-start.sh; then
+        # Linux installation - check for existing installation first
+        if [[ -n "$KAFKA_BIN" && -n "$KAFKA_DIR" ]]; then
+            print_success "Using existing Kafka installation at: $KAFKA_BIN"
+        elif ! command_exists /opt/kafka/bin/kafka-server-start.sh; then
             print_status "Installing Kafka for Linux..."
             cd /tmp
             wget -q https://downloads.apache.org/kafka/2.13-3.6.0/kafka_2.13-3.6.0.tgz
             tar -xzf kafka_2.13-3.6.0.tgz
             sudo mv kafka_2.13-3.6.0 /opt/kafka
             sudo chown -R $USER:$USER /opt/kafka
+            KAFKA_DIR="/opt/kafka"
+            KAFKA_BIN="/opt/kafka/bin/kafka-server-start.sh"
             
             # Add Kafka to PATH
             if ! grep -q "/opt/kafka/bin" ~/.bashrc; then
@@ -137,19 +178,21 @@ setup_kafka() {
             fi
         else
             print_success "Kafka is already installed"
+            KAFKA_DIR="/opt/kafka"
+            KAFKA_BIN="/opt/kafka/bin/kafka-server-start.sh"
         fi
         
         # Start Kafka services for Linux
         if ! pgrep -f "kafka.Kafka" > /dev/null; then
             print_status "Starting Kafka services..."
-            cd /opt/kafka
+            cd "$KAFKA_DIR"
             
             # Start Zookeeper in background
-            bin/zookeeper-server-start.sh config/zookeeper.properties > /tmp/zookeeper.log 2>&1 &
+            nohup bin/zookeeper-server-start.sh config/zookeeper.properties > /tmp/zookeeper.log 2>&1 &
             sleep 5
             
             # Start Kafka in background
-            bin/kafka-server-start.sh config/server.properties > /tmp/kafka.log 2>&1 &
+            nohup bin/kafka-server-start.sh config/server.properties > /tmp/kafka.log 2>&1 &
             sleep 10
         else
             print_success "Kafka is already running"
@@ -179,8 +222,10 @@ setup_cassandra() {
         fi
         
     else
-        # Linux installation
-        if ! command_exists cassandra; then
+        # Linux installation - check for existing installation first
+        if [[ -n "$CASSANDRA_BIN" ]]; then
+            print_success "Using existing Cassandra installation at: $CASSANDRA_BIN"
+        elif ! command_exists cassandra; then
             print_status "Installing Cassandra for Linux..."
             
             # Add Cassandra repository
@@ -194,11 +239,17 @@ setup_cassandra() {
         fi
         
         # Start Cassandra service for Linux
-        if ! systemctl is-active --quiet cassandra; then
+        if ! pgrep -f "cassandra" > /dev/null; then
             print_status "Starting Cassandra..."
-            sudo systemctl start cassandra
-            sudo systemctl enable cassandra
-            sleep 15
+            if systemctl start cassandra 2>/dev/null; then
+                print_success "Cassandra started via systemd"
+                sleep 15
+            else
+                # Fallback to manual start
+                print_status "Starting Cassandra manually..."
+                nohup "$CASSANDRA_BIN" > /tmp/cassandra.log 2>&1 &
+                sleep 15
+            fi
         else
             print_success "Cassandra is already running"
         fi
@@ -217,8 +268,15 @@ wait_for_services() {
                 break
             fi
         else
-            if /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1; then
-                break
+            # Use detected Kafka directory
+            if [[ -n "$KAFKA_DIR" ]]; then
+                if "$KAFKA_DIR/bin/kafka-topics.sh" --bootstrap-server localhost:9092 --list >/dev/null 2>&1; then
+                    break
+                fi
+            else
+                if /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1; then
+                    break
+                fi
             fi
         fi
         
@@ -259,7 +317,12 @@ setup_kafka_topics() {
         if [[ "$OS" == "macos" ]]; then
             kafka-topics --create --topic traffic.raw --bootstrap-server localhost:9092 --partitions 3 --replication-factor 1 --if-not-exists
         else
-            /opt/kafka/bin/kafka-topics.sh --create --topic traffic.raw --bootstrap-server localhost:9092 --partitions 3 --replication-factor 1 --if-not-exists
+            # Use detected Kafka directory
+            if [[ -n "$KAFKA_DIR" ]]; then
+                "$KAFKA_DIR/bin/kafka-topics.sh" --create --topic traffic.raw --bootstrap-server localhost:9092 --partitions 3 --replication-factor 1 --if-not-exists
+            else
+                /opt/kafka/bin/kafka-topics.sh --create --topic traffic.raw --bootstrap-server localhost:9092 --partitions 3 --replication-factor 1 --if-not-exists
+            fi
         fi
         print_success "Kafka topics created manually"
     fi
@@ -291,6 +354,17 @@ populate_sensor_data() {
     fi
 }
 
+# Install Node.js dependencies
+install_node_deps() {
+    if [[ -f "package.json" ]]; then
+        print_status "Installing Node.js dependencies..."
+        npm install
+        print_success "Node.js dependencies installed"
+    else
+        print_warning "package.json not found. React dashboard may not be available."
+    fi
+}
+
 # Verify setup
 verify_setup() {
     print_status "Verifying setup..."
@@ -300,7 +374,12 @@ verify_setup() {
     if [[ "$OS" == "macos" ]]; then
         kafka-topics --bootstrap-server localhost:9092 --list
     else
-        /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
+        # Use detected Kafka directory
+        if [[ -n "$KAFKA_DIR" ]]; then
+            "$KAFKA_DIR/bin/kafka-topics.sh" --bootstrap-server localhost:9092 --list
+        else
+            /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
+        fi
     fi
     
     # Check Cassandra keyspace and tables
@@ -333,6 +412,7 @@ except Exception as e:
 # Main execution
 main() {
     detect_os
+    detect_existing_installations
     
     print_status "Starting complete setup process..."
     echo ""
@@ -353,14 +433,33 @@ main() {
     setup_cassandra_schema
     populate_sensor_data
     
+    # Install Node.js dependencies
+    install_node_deps
+    
     # Verify everything is working
     verify_setup
     
     echo ""
     print_success "🎉 Complete setup finished successfully!"
     echo ""
+    print_status "Your detected configuration:"
+    if [[ "$OS" == "macos" ]]; then
+        print_status "  OS: macOS"
+        print_status "  Kafka: $(which kafka-server-start 2>/dev/null || echo 'via Homebrew')"
+        print_status "  Cassandra: $(which cassandra 2>/dev/null || echo 'via Homebrew')"
+    else
+        print_status "  OS: Linux"
+        print_status "  Kafka: ${KAFKA_BIN:-'/opt/kafka/bin/kafka-server-start.sh'}"
+        print_status "  Cassandra: ${CASSANDRA_BIN:-'/usr/sbin/cassandra'}"
+    fi
+    print_status "  Java: $(java -version 2>&1 | head -n 1)"
+    print_status "  Python: $(python3 --version)"
+    if command -v node >/dev/null 2>&1; then
+        print_status "  Node.js: $(node --version)"
+    fi
+    echo ""
     print_status "You can now run the IoT system with:"
-    print_status "  ./start_iot_app.sh"
+    print_status "  ./start_iot_app_v2.sh"
     echo ""
     print_status "Dashboard will be available at:"
     print_status "  http://localhost:5002"
@@ -368,4 +467,4 @@ main() {
 }
 
 # Run main function
-main "$@" 
+main "$@"

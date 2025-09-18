@@ -47,7 +47,7 @@ echo "✅ React application built successfully"
 echo "🔧 Updating Flask server to serve React application..."
 
 # Create backup of original dashboard
-cp dashboard.py dashboard_html_backup.py
+# Old dashboard.py removed - using dashboard_react.py
 
 cat > dashboard_react.py << 'EOF'
 #!/usr/bin/env python3
@@ -95,7 +95,7 @@ echo ""
 echo "🎉 React Dashboard Setup Complete!"
 echo ""
 echo "📋 Next Steps:"
-echo "   1. Stop your current dashboard: Ctrl+C in the terminal running dashboard.py"
+echo "   1. Stop your current dashboard: Ctrl+C in the terminal running dashboard_react.py"
 echo "   2. Start the React-powered dashboard: python3 dashboard_react.py"
 echo "   3. Open your browser to: http://localhost:5002"
 echo ""

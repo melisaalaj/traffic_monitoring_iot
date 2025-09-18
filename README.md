@@ -20,9 +20,16 @@ A comprehensive real-time data processing and visualization system for IoT senso
     ↓
 💾 Apache Cassandra (Time-Series Database)
     ↓
+🚨 Alert Engine
+   • Real-time threshold monitoring
+   • Warning & Critical alert generation
+   • SMS notifications via Twilio
+   • Alert storage and management
+    ↓
 🌐 Flask API Server (REST Endpoints)
     ↓
 ⚛️ React Dashboard (Real-time Visualization)
+   • Alert Dashboard
    • Interactive Maps (Leaflet)
    • Data Visualizations (Chart.js)
    • Traffic Monitoring
@@ -51,10 +58,14 @@ A comprehensive real-time data processing and visualization system for IoT senso
 - **Statistical Analysis**: Real-time aggregations and trends
 
 ### 🗄️ Scalable Storage
-- **Cassandra Database**: Time-series optimized storage
-- **60 Sensors**: 20 traffic, 20 air quality, 20 noise sensors
-- **Fault Tolerance**: Retry logic and graceful error handling
-- **Real-time Monitoring**: Statistics and comprehensive logging
+
+### 🚨 Alert System
+- **Real-time Monitoring**: Continuous threshold checking for all sensor types
+- **Configurable Thresholds**: Warning and critical levels for traffic, air quality, and noise
+- **SMS Notifications**: Automatic SMS alerts via Twilio for critical conditions
+- **Alert Dashboard**: Real-time alert visualization and management
+- **Multi-sensor Support**: Traffic loops, air quality, and noise sensors
+- **Short Message Format**: Optimized for Twilio trial account limits
 
 ## 📋 Prerequisites
 
@@ -79,6 +90,7 @@ chmod +x setup_all.sh
 ```
 
 This script will:
+ - ✅ Configure Twilio SMS credentials (see Twilio SMS Setup below)
 - ✅ Install Java, Kafka, and Cassandra
 - ✅ Install Python dependencies
 - ✅ Start all required services
@@ -240,14 +252,21 @@ iot-traffic-monitoring/
 ├── stop_iot_app_dev.sh               # Development shutdown script
 │
 ├── 🐍 Python Backend
-├── simulator.py                      # IoT sensor data generator (60 sensors)
+├── realistic_simulator_60.py         # IoT sensor data generator (60 sensors)
 ├── enhanced_streaming_pipeline.py    # Main streaming processor
+├── alert_engine.py                   # Alert processing and threshold monitoring
+├── sms_notification_service.py       # SMS notifications via Twilio
+├── alert_config.py                   # Alert thresholds and Twilio configuration
+├── alert_endpoints.py                # Alert API endpoints
+├── alert_engine.py                   # Alert processing and threshold monitoring
+├── sms_notification_service.py       # SMS notifications via Twilio
+├── alert_config.py                   # Alert thresholds and Twilio configuration
+├── alert_endpoints.py                # Alert API endpoints
 ├── dashboard_react.py                # Flask server for React dashboard
 ├── api_endpoints.py                  # REST API endpoints
 ├── setup_kafka_topics.py            # Kafka topic creation
 ├── setup_cassandra.py               # Database schema setup
 ├── populate_sensors.py              # Sensor metadata population
-├── kafka_to_cassandra.py            # Basic Python consumer (backup)
 │
 ├── ⚛️ React Frontend
 ├── package.json                      # Node.js dependencies
@@ -274,7 +293,6 @@ iot-traffic-monitoring/
         └── TrafficMonitoring.js      # Dedicated traffic dashboard
 │
 └── 📊 Legacy Files
-    ├── dashboard.py                  # Original Flask dashboard
     └── templates/
         └── dashboard.html            # Original HTML template
 ```
@@ -294,6 +312,7 @@ iot-traffic-monitoring/
 - **Tables**:
   - `sensor_metadata` - Sensor information (60 sensors)
   - `aggregates_minute` - 1-minute aggregated data
+  - alerts - Alert storage with severity, thresholds, and resolution status
 
 ### API Endpoints
 - **Base URL**: `http://localhost:5002` (production) or `http://localhost:5010` (development)
@@ -302,15 +321,43 @@ iot-traffic-monitoring/
 - **Historical Traffic**: `GET /api/traffic/historical?period=1hour&granularity=1min`
 - **Historical Air Quality**: `GET /api/air_quality/historical?period=1hour&granularity=1min`
 - **Historical Noise**: `GET /api/noise/historical?period=1hour&granularity=1min`
+ - **Active Alerts**: `GET /api/alerts/active` - Current unresolved alerts
+- **Alert Statistics**: `GET /api/alerts/stats` - Alert counts and statistics
 
 ### React Configuration
+
+### Alert Configuration
+
+### Twilio SMS Setup
+Before running the application, you need to configure your Twilio credentials in `alert_config.py`:
+
+```python
+# Twilio SMS Configuration
+TWILIO_ACCOUNT_SID = "your-twilio-account-sid"  # Replace with your Twilio Account SID
+TWILIO_AUTH_TOKEN = "your-twilio-auth-token"    # Replace with your Twilio Auth Token
+TWILIO_FROM_NUMBER = "your-twilio-from-number"  # Replace with your Twilio phone number
+TWILIO_TO_NUMBER = "your-phone-number"         # Replace with your phone number
+```
+
+**Getting Twilio Credentials:**
+1. Sign up at [twilio.com](https://www.twilio.com)
+2. Get your Account SID and Auth Token from the Twilio Console
+3. Purchase a phone number or use the trial number
+4. Verify your recipient phone number in the Twilio Console
+
+**Note:** The system uses short SMS messages optimized for Twilio trial accounts.
+- **Thresholds**: Configurable warning and critical levels in `alert_config.py`
+- **SMS Settings**: Twilio credentials and phone numbers
+- **Alert Types**: Traffic (speed, wait time, vehicle count), Air Quality (PM2.5, CO), Noise (dB levels)
+- **Message Format**: Short SMS messages optimized for trial accounts
+- **Check Interval**: 1-minute polling for new critical alerts
 - **Development Server**: `localhost:3000`
 - **Production Build**: Served by Flask at `localhost:5002`
 - **API Proxy**: Configured for seamless development
 
 ## 📊 Data Flow
 
-### 1. Data Generation (`simulator.py`)
+### 1. Data Generation (`realistic_simulator_60.py`)
 Generates realistic IoT sensor data for 60 sensors:
 - **Traffic Loops (20)**: Vehicle counts, speeds, wait times
 - **Air Quality (20)**: PM2.5, AQI, temperature measurements  
@@ -323,6 +370,10 @@ Data flows through Kafka topics with:
 - **Serialization**: JSON format
 
 ### 3. Stream Processing (`enhanced_streaming_pipeline.py`)
+├── alert_engine.py                   # Alert processing and threshold monitoring
+├── sms_notification_service.py       # SMS notifications via Twilio
+├── alert_config.py                   # Alert thresholds and Twilio configuration
+├── alert_endpoints.py                # Alert API endpoints
 Real-time processing with:
 
 #### Sliding Windows
@@ -359,6 +410,7 @@ kafka-console-consumer \
 ### Check Cassandra Data
 ```bash
 cqlsh -e "SELECT * FROM traffic.aggregates_minute LIMIT 10;"
+  - alerts - Alert storage with severity, thresholds, and resolution status
 cqlsh -e "SELECT COUNT(*) FROM traffic.sensor_metadata;"
 ```
 

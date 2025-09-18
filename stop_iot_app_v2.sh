@@ -35,6 +35,15 @@ stop_process "React Dashboard" ".dashboard_v2.pid"
 stop_process "Streaming Pipeline" ".pipeline_v2.pid"
 stop_process "Data Simulator" ".simulator_v2.pid"
 
+
+# Stop alert components if they exist
+if [ -f ".alert_engine_v2.pid" ] || [ -f ".sms_v2.pid" ]; then
+    echo "🔄 Stopping alert system components..."
+    stop_process "Alert Engine" ".alert_engine_v2.pid"
+    stop_process "SMS Service" ".sms_v2.pid"
+fi
+stop_process "SMS Service" ".sms_v2.pid"
+
 # Additional cleanup - kill any remaining processes
 echo ""
 echo "🧹 Cleaning up any remaining processes..."
@@ -44,6 +53,11 @@ pkill -f "dashboard_react.py" 2>/dev/null
 pkill -f "enhanced_streaming_pipeline.py" 2>/dev/null
 pkill -f "realistic_simulator_60.py" 2>/dev/null
 
+pkill -f "alert_engine.py" 2>/dev/null
+pkill -f "sms_notification_service.py" 2>/dev/null
+
+pkill -f "sms_notification_service.py" 2>/dev/null
+
 echo ""
 echo "✅ IoT Traffic Monitoring System v2 stopped successfully!"
 echo ""
@@ -52,6 +66,8 @@ echo "   • React Dashboard: Stopped"
 echo "   • API Endpoints: Stopped"
 echo "   • Streaming Pipeline: Stopped"
 echo "   • Data Simulator: Stopped"
+
+    echo "   • SMS Service: Stopped"
 echo ""
 echo "💡 To restart the system:"
 echo "   ./start_iot_app_v2.sh"

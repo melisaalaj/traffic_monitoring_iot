@@ -47,6 +47,9 @@ pkill -f "api_endpoints.py" 2>/dev/null
 pkill -f "enhanced_streaming_pipeline.py" 2>/dev/null
 pkill -f "realistic_simulator_60.py" 2>/dev/null
 
+pkill -f "alert_engine.py" 2>/dev/null
+pkill -f "sms_notification_service.py" 2>/dev/null
+
 echo ""
 echo "✅ IoT Traffic Monitoring System - DEVELOPMENT MODE stopped!"
 echo ""

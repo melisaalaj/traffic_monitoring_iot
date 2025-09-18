@@ -5,6 +5,7 @@ import SensorGrid from './SensorGrid';
 import SensorMap from './SensorMap';
 import FilterButtons from './FilterButtons';
 import TrafficMonitoring from './TrafficMonitoring';
+import AlertDashboard from './AlertDashboard';
 
 const TabContent = styled.div`
   background: rgba(255, 255, 255, 0.95);
@@ -12,6 +13,10 @@ const TabContent = styled.div`
   padding: 30px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.2);
   min-height: 600px;
+`;
+
+const AlertSection = styled.div`
+  margin-bottom: 30px;
 `;
 
 const OverviewContent = styled.div`
@@ -109,6 +114,11 @@ const Overview = ({
 
   return (
     <TabContent>
+      {/* Alert Dashboard Section */}
+      <AlertSection>
+        <AlertDashboard />
+      </AlertSection>
+
       <OverviewContent>
         <div>
           <FilterButtons

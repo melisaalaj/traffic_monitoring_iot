@@ -13,6 +13,8 @@ from datetime import datetime, timedelta
 # Create Blueprint for API routes
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
+# Register alert endpoints
+
 def get_cassandra_connection():
     """Connect to Cassandra database"""
     try:

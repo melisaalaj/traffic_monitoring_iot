@@ -1,5 +1,7 @@
 #!/bin/bash
 
+
+echo ""
 echo "🚀 Starting IoT Traffic Monitoring System - DEVELOPMENT MODE"
 echo "📍 60 Sensors: 20 Traffic, 20 Air Quality, 20 Noise"
 echo "⚛️  React Development Server with Hot Reload"
@@ -77,6 +79,18 @@ SIMULATOR_PID=$!
 # Wait a moment for simulator to start
 sleep 3
 
+# Start Alert Engine
+echo "🔄 Starting Alert Engine..."
+python3 alert_engine.py &
+ALERT_ENGINE_PID=$!
+sleep 3
+
+# Start SMS Notification Service
+echo "🔄 Starting SMS Notification Service..."
+python3 sms_notification_service.py &
+SMS_PID=$!
+sleep 2
+
 # Start the enhanced streaming pipeline
 echo "🔄 Starting enhanced streaming pipeline..."
 python3 enhanced_streaming_pipeline.py &
@@ -85,6 +99,24 @@ PIPELINE_PID=$!
 # Wait a moment for pipeline to start
 sleep 3
 
+# Start Alert Engine
+echo "🔄 Starting Alert Engine..."
+python3 alert_engine.py &
+ALERT_ENGINE_PID=$!
+sleep 3
+
+# Start SMS Notification Service
+echo "🔄 Starting SMS Notification Service..."
+python3 sms_notification_service.py &
+SMS_PID=$!
+sleep 2
+
+
+echo "🔄 Starting SMS Notification Service..."
+        python3 sms_notification_service.py &
+        SMS_PID=$!
+        sleep 2
+    fi
 # Start the API server (Flask backend)
 echo "🔄 Starting API server (Flask backend)..."
 FLASK_RUN_PORT=5010 python3 -c "
@@ -95,6 +127,18 @@ API_PID=$!
 
 # Wait a moment for API to start
 sleep 3
+
+# Start Alert Engine
+echo "🔄 Starting Alert Engine..."
+python3 alert_engine.py &
+ALERT_ENGINE_PID=$!
+sleep 3
+
+# Start SMS Notification Service
+echo "🔄 Starting SMS Notification Service..."
+python3 sms_notification_service.py &
+SMS_PID=$!
+sleep 2
 
 # Start React development server
 echo "🔄 Starting React development server with hot reload..."
